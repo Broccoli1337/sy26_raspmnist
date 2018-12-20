@@ -6,12 +6,23 @@ import tensorflow as tf
 from tensorflow import keras
 
 # Helper libraries
+from PIL import Image
 import numpy as np
-import matplotlib.pyplot as plt
+
+#import cv2
+#import matplotlib.pyplot as plt
+#import matplotlib.image as mpimg
 
 #Installation et import des dépendances de TenserFlow
 
 import os
+
+#pip install --user png
+#https://github.com/drj11/pypng/
+#https://pythonhosted.org/pypng/ex.htmlhttps://pythonhosted.org/pypng/ex.html
+#import png
+
+#import scipy.misc
 
 print(tf.__version__)
 
@@ -27,9 +38,9 @@ save_path = "save/network_data.index"
 save_dir = "./" + save_path
 
 #Repertoire qui contiendra les images a tester
-imgDir = "./images/"
+imgDir = "./imgData/"
 #Chemin de l'image a tester
-imgPath = "./image/test.png"
+imgPath = "./imgData/sample.png"
 
 #----------------------- Debut de l'apprentissage ------------------------------
 
@@ -123,21 +134,70 @@ def get_images():
     
 #------------------------ Fin get_images()
 
+#Traitement d'une image pour qu'elle soit au meme format que celles de la base de donnée utilisée
+# ------------------------ Debut convertImage(img_path)
+def convertImage(img_path):
+    
+    size = 28
+    
+    img = Image.open(img_path) #Ouverture de l'image
+    img = np.asarray(img)
+    img.setflags(write=1)
+    img = negative(img)
+    img = Image.fromarray(img)
+    
+    wpercent = (size/float(img.size[0]))
+    hsize = int((float(img.size[1])*float(wpercent)))
+    #https://stackoverflow.com/questions/273946/how-do-i-resize-an-image-using-pil-and-maintain-its-aspect-ratio
+    img = img.resize((size,hsize+1),Image.ANTIALIAS) #Redimensionne l'image
+    img = img.convert("L") #Conversion des couleurs en niveaux de gris
+    img.save(imgDir + "new_sample.png") #Sauvegarde de l'image
+    
+# ------------------------ Fin convertImage(img_path)   
+
+#Copier de StackOverflow
+#https://stackoverflow.com/questions/12201577/how-can-i-convert-an-rgb-image-into-grayscale-in-python
+def rgb2gray(rgb):
+    return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
+
+def negative(img):
+    
+    height = len(img)
+    width = len(img[0])
+    negImg = img
+    
+    for ligne in range(height):
+        for col in range(width):
+            r = 255 - img[ligne][col][0]
+            g = 255 - img[ligne][col][1]
+            b = 255 - img[ligne][col][2]
+            negImg[ligne][col]=[r,g,b]
+            
+    return negImg
+
 #Prediction de la classe de l'image
 # ------------------------ Debut predict_img()
 def predict_img(img_path):
-    
+
     #Provisoire
-    img_path = test_images[1];
+    #img_path = test_images[1]    
+    
+    img = Image.open(img_path)
+    img = np.asarray(img)
+    img = img / 255.0
+    
+    #img = test_images[8]
+    newImg = Image.fromarray(img*255)
+    
     # Ajout de l'image au groupe d'image dont on veut prédire les classes
-    img_path = (np.expand_dims(img_path,0))
+    img = (np.expand_dims(img,0))
     
-    prediction = model.predict(img_path)
+    prediction = model.predict(img)
     prediction = np.argmax(prediction[0])
-    
-    print("Valeur attendue : ",test_labels[1])
-    print("Prediction : ",prediction)
-    
+
+    #print("Valeur attendue : ",test_labels[1])
+    print("Prediction : ",class_names[prediction])
+
     return prediction
     
 #------------------------ Fin predict_img()
@@ -154,6 +214,7 @@ if os.path.isfile(save_path):
     loss,acc = model.evaluate(test_images, test_labels)
     print("Modele restauré, précision : {:5.2f}%".format(100*acc))
     
-    prediction = predict_img(imgPath)
+    convertImage(imgPath)
+    prediction = predict_img(imgDir + "new_sample.png")
 else:
     makeSave()
